@@ -97,9 +97,11 @@ def shift_rows(state) :
 def mix_columns(state) :
     # TO-DO
 
-# Function to handle add round key step
+# Performs XOR operation between state and round key
 def add_round_key(state, round_key) :
-    # TO-DO
+    for i in range(16) :
+        state[i] ^= round_key[i]
+    return state
 
 # Encryption skeleton
 def encrypt(input, key) :
@@ -111,16 +113,16 @@ def encrypt(input, key) :
     key_expansion()
 
     # Initial Round
-    add_round_key(state, key)
+    state = add_round_key(state, key)
 
     # Intermediate Rounds
     for i in range(num_rounds) :
         state = sub_bytes(state)
         state = shift_rows(state)
         mix_columns(state)
-        add_round_key(state, key)
+        state = add_round_key(state, key)
 
     # Final Round
-    sub_bytes(state)
-    shift_rows(state)
-    add_round_key(state, key)
+    state = sub_bytes(state)
+    state = shift_rows(state)
+    state = add_round_key(state, key)
