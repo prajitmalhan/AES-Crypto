@@ -71,9 +71,27 @@ def sub_bytes(state) :
         state[i] = sbox[state[i]]
     return state
 
-# Function that handles shifting row step
+# Performs row shift operation on state
 def shift_rows(state) :
-    # TO-DO
+    temp = [0 for i in range(16)]
+    temp[0] = state[0]
+    temp[1] = state[5]
+    temp[2] = state[10]
+    temp[3] = state[15]
+    temp[4] = state[4]
+    temp[5] = state[9]
+    temp[6] = state[14]
+    temp[7] = state[3]
+    temp[8] = state[8]
+    temp[9] = state[13]
+    temp[10] = state[2]
+    temp[11] = state[7]
+    temp[12] = state[12]
+    temp[13] = state[1]
+    temp[14] = state[6]
+    temp[15] = state[11]
+    return temp
+
 
 # Function to handle mixing columns step
 def mix_columns(state) :
@@ -97,10 +115,8 @@ def encrypt(input, key) :
 
     # Intermediate Rounds
     for i in range(num_rounds) :
-        # sub_bytes
         state = sub_bytes(state)
-
-        shift_rows(state)
+        state = shift_rows(state)
         mix_columns(state)
         add_round_key(state, key)
 
