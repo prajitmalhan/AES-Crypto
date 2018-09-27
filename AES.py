@@ -244,6 +244,27 @@ def add_round_key(state, round_key) :
         state[i] ^= round_key[i]
     return state
 
+# Add padding to the message if not a multiple of 16
+def add_padding(message, key) :
+    original_length = len(message)
+    new_length = original_length
+
+    # Make the new_length a multiple of 16
+    if(new_length % 16 != 0) :
+        new_length = (new_length / 16 + 1) * 16
+
+    # Add the original message to the new one with padding
+    new_message = [0 for i in range(new_length)]
+    for i in range(new_length) :
+        if i >= original_length :
+            new_message[i] = 0
+        else :
+            new_message[i] = message[i]
+
+    # Encrypt the padded message
+    for i in range(0,new_length,16) :
+        encrypt(new_message[i : i+16], key)
+        
 # Encryption skeleton
 def encrypt(input, key) :
     if not(args.keysize == 128 or args.keysize == 256) :
