@@ -176,7 +176,13 @@ def add_round_key(state, round_key) :
 
 # Encryption skeleton
 def encrypt(input, key) :
-    num_rounds = n
+    if not(args.keysize == 128 or args.keysize == 256) :
+        print("Incorrect AES size")
+        exit()
+    elif args.keysize == 128 :
+        num_rounds = 9
+    else :
+        num_rounds = 13
 
     # Converts this 16-character block to hex values for state
     state = [hex(ord(c)) for c in input[0:16]]
