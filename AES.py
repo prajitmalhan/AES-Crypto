@@ -33,12 +33,6 @@ parser.add_argument(
             help="The AES mode to be used (encrypt or decrypt).")
 args = parser.parse_args()
 
-# Input received from inputfile argument
-input = args.inputfile.read()
-
-# Key received from keyfile argument
-key = args.keyfile.read()
-
 #Rijndael RCon box used for RCon step in key_expansion_aux
 RCON = [0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36, 0x6c,
     0xd8, 0xab, 0x4d, 0x9a, 0x2f, 0x5e, 0xbc, 0x63, 0xc6, 0x97, 0x35, 0x6a,
@@ -167,22 +161,20 @@ MUL_3 = [0x00, 0x03, 0x06, 0x05, 0x0c, 0x0f, 0x0a, 0x09, 0x18, 0x1b, 0x1e, 0x1d,
 # 3 steps: Rotate left, look up in s-box, look up in RCon box
 def key_expansion_aux(inp, iter) :
     # Rotate left:
-    temp = inp[0]
-    for i in range(2) :
-        inp[i] = inp[i+1]
-    inp[3] = temp
+    inp = inp[1:] + inp[1]
 
     # Look up in s-box:
-    for i in range(3) :
+    for i in range(4) :
         inp[i] = sbox[inp[i]]
 
     # Look up in RCon table
     # First byte needs to be XOR'd to itself and the RCon value
     inp[0] ^= RCon[iter]
 
+    return inp
+
 # Function to handle key expansion step
 def key_expansion(i_key, e_keys) :
-
     # First need to copy the first 16 bytes of the original key into the new key
     for i in range(16) :
         e_keys[i] = i_key[i]
@@ -205,12 +197,14 @@ def key_expansion(i_key, e_keys) :
             temp[i] = e_keys[i + bytes_generated - 4]
 
         if bytes_generated % 16 == 0 :
-            key_expansion_aux(temp, rcon_iteration)
+            temp = key_expansion_aux(temp, rcon_iteration)
             rcon_iteration += 1
 
         for i in range(4) :
-            e_keys[bytes_generated] = e_keys[bytes_generated - 16] ^ temp[x]
+            e_keys[bytes_generated] = e_keys[bytes_generated - 16] ^ temp[i]
             bytes_generated += 1
+
+    return e_keys
 
 # Substitutes each byte with its corresponding value from the Rijndael S-Box
 def sub_bytes(state) :
@@ -266,52 +260,51 @@ def add_round_key(state, round_key) :
         state[i] ^= round_key[i]
     return state
 
-# Adds padding to original message
-def add_padding(message, key) :
-    original_length = len(message)
-    new_length = original_length
+def encrypt(inp, key) :
+    # Based on keysize, the number of rounds (10 or 14) will be different
+    num_rounds = 10 if args.keysize == 128 else 14
 
-    # Make the new_length a multiple of 16
-    if(new_length % 16 != 0) :
-        new_length = (new_length / 16 + 1) * 16
-
-    # Add the original message to the new one with padding
-    new_message = [0 for i in range(new_length)]
-    for i in range(new_length) :
-        if i >= original_length :
-            new_message[i] = 0
-        else :
-            new_message[i] = message[i]
-
-    # Encrypt the padded message
-    for i in range(0,new_length,16) :
-        encrypt(new_message[i : i+16], key)
-
-# Encryption skeleton
-def encrypt(input, key) :
-    elif args.keysize == 128 :
-        num_rounds = 9
-    else :
-        num_rounds = 13
-
-    # Converts this 16-character block to hex values for state
-    state = [hex(ord(c)) for c in input[0:16]]
+    # Get 16 character block of input
+    state = inp[0:16]
 
     # Expanded key used for key_expansion purposes
+    key = [hex(ord(c)) for c in key]
     expanded_key = [0 for i in range(176)]
-    key_expansion(key, expanded_key)
+    expanded_key = key_expansion(key, expanded_key)
 
     # Initial Round
     state = add_round_key(state, key)
 
     # Intermediate Rounds
-    for i in range(num_rounds) :
+    for i in range(1, num_rounds) :
         state = sub_bytes(state)
         state = shift_rows(state)
         state = mix_columns(state)
-        state = add_round_key(state, expanded_key + (16 * (i + 1))) #Changed from key to expanded key stuff
+        state = add_round_key(state, expanded_key[(16 * i) :])
 
     # Final Round
     state = sub_bytes(state)
     state = shift_rows(state)
-    state = add_round_key(state, expanded_key + 160) # Changed from key to expanded_key
+    state = add_round_key(state, expanded_key[(16 * num_rounds) :])
+
+    return state
+
+# Adds padding to original message and runs encryption
+def run_encrytion(message, key) :
+    original_length = len(message)
+    new_length = original_length
+
+    # Make the new_length a multiple of 16
+    if new_length % 16 != 0 :
+        new_length = (new_length / 16 + 1) * 16
+
+    # Add the original message to the new one with padding
+    new_message = [0 for i in range(new_length)]
+    for i in range(original_length) :
+        new_message[i] = hex(ord(message[i]))
+
+    # Encrypt the padded message
+    for i in range(0, new_length, 16) :
+        new_message[16*i : ] = encrypt(new_message[16*i : ], key)
+
+    return new_message
