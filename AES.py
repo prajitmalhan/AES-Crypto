@@ -309,4 +309,9 @@ def run_encrytion(message, key) :
     for i in range(0, new_length, 16) :
         new_message[i : i + 16] = encrypt(new_message[i : i + 16], key)
 
+    # Convert hex back into string and return output
+    new_message = [chr(i) for i in new_message]
+    new_message = ''.join(new_message)
     return new_message
+
+args.outputfile.write("Output:\n%s", run_encrytion(args.inputfile.read(), args.keyfile.read()))
